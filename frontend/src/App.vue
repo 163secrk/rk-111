@@ -31,6 +31,16 @@
         @add-connection="onAddConnection"
         @delete-connection="onDeleteConnection"
         @toggle-input="onToggleInput"
+        @select-gate="onSelectGate"
+        @canvas-click="onCanvasClick"
+      />
+      <PropertyPanel
+        v-if="selectedGate"
+        :gate="selectedGate"
+        :gates="gates"
+        :connections="connections"
+        @close="onClosePropertyPanel"
+        @update-label="onUpdateGateLabel"
       />
     </div>
   </div>
@@ -41,6 +51,7 @@ import { ref, onMounted, watch } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import GatePanel from './components/GatePanel.vue'
 import LogicCanvas from './components/LogicCanvas.vue'
+import PropertyPanel from './components/PropertyPanel.vue'
 import { circuitApi } from './api'
 
 const circuits = ref([])
@@ -48,6 +59,7 @@ const currentCircuitId = ref(null)
 const gates = ref([])
 const connections = ref([])
 const canvasRef = ref(null)
+const selectedGate = ref(null)
 let gateIdCounter = 0
 let connectionIdCounter = 0
 
@@ -61,6 +73,7 @@ const createCircuit = async () => {
     connections.value = []
     gateIdCounter = 0
     connectionIdCounter = 0
+    selectedGate.value = null
     MessagePlugin.success('电路创建成功')
   } catch (e) {
     MessagePlugin.error('创建失败')
@@ -92,6 +105,7 @@ const loadCircuit = async (id) => {
     connections.value = res.data.connections || []
     gateIdCounter = gates.value.reduce((max, g) => Math.max(max, g.id || 0), 0)
     connectionIdCounter = connections.value.reduce((max, c) => Math.max(max, c.id || 0), 0)
+    selectedGate.value = null
   } catch (e) {
     MessagePlugin.error('加载电路失败')
   }
@@ -129,7 +143,31 @@ const onUpdateGate = ({ id, x, y }) => {
 const onDeleteGate = (id) => {
   gates.value = gates.value.filter(g => g.id !== id)
   connections.value = connections.value.filter(c => c.fromGateId !== id && c.toGateId !== id)
+  if (selectedGate.value && selectedGate.value.id === id) {
+    selectedGate.value = null
+  }
   simulate()
+}
+
+const onSelectGate = (gate) => {
+  selectedGate.value = { ...gate }
+}
+
+const onClosePropertyPanel = () => {
+  selectedGate.value = null
+}
+
+const onUpdateGateLabel = (label) => {
+  if (!selectedGate.value) return
+  const gate = gates.value.find(g => g.id === selectedGate.value.id)
+  if (gate) {
+    gate.label = label
+    selectedGate.value.label = label
+  }
+}
+
+const onCanvasClick = () => {
+  selectedGate.value = null
 }
 
 const onAddConnection = ({ fromGateId, fromPort, toGateId, toPort }) => {

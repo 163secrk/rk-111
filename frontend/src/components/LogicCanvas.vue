@@ -24,7 +24,7 @@
         :key="conn.id"
         :d="getConnectionPath(conn)"
         :class="['connection-line', { active: isConnectionActive(conn) }]"
-        @click.stop="onConnectionClick(conn.id)"
+        @contextmenu.prevent.stop="onConnectionContextMenu($event, conn)"
       />
 
       <path
@@ -93,6 +93,21 @@
       </div>
     </div>
 
+    <div
+      v-if="contextMenu.visible"
+      class="context-menu"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+      @mousedown.stop
+      @click.stop
+    >
+      <div class="context-menu-item danger" @click="onDeleteContextConnection">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </svg>
+        删除连线
+      </div>
+    </div>
+
     <div v-if="gates.length === 0" class="empty-hint">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
@@ -116,7 +131,9 @@ const emit = defineEmits([
   'delete-gate',
   'add-connection',
   'delete-connection',
-  'toggle-input'
+  'toggle-input',
+  'select-gate',
+  'canvas-click'
 ])
 
 const canvasRef = ref(null)
@@ -128,6 +145,14 @@ const mousePos = ref({ x: 0, y: 0 })
 
 const draggingGate = ref(null)
 const dragOffset = ref({ x: 0, y: 0 })
+
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  targetType: '',
+  targetId: null
+})
 
 const gridStyle = computed(() => ({
   backgroundSize: '20px 20px, 100px 100px',
@@ -237,6 +262,8 @@ const onDrop = (e) => {
 
 const onCanvasClick = () => {
   selectedGateId.value = null
+  hideContextMenu()
+  emit('canvas-click')
   if (connecting.value) {
     connecting.value = false
     connectFrom.value = null
@@ -249,6 +276,7 @@ const onGateMouseDown = (e, gate) => {
   }
 
   selectedGateId.value = gate.id
+  emit('select-gate', gate)
   draggingGate.value = gate
 
   const rect = canvasRef.value.getBoundingClientRect()
@@ -314,8 +342,26 @@ const onPortClick = (gateId, portType, portIndex) => {
   }
 }
 
-const onConnectionClick = (id) => {
-  emit('delete-connection', id)
+const onConnectionContextMenu = (e, conn) => {
+  const rect = canvasRef.value.getBoundingClientRect()
+  contextMenu.value = {
+    visible: true,
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+    targetType: 'connection',
+    targetId: conn.id
+  }
+}
+
+const hideContextMenu = () => {
+  contextMenu.value.visible = false
+}
+
+const onDeleteContextConnection = () => {
+  if (contextMenu.value.targetType === 'connection') {
+    emit('delete-connection', contextMenu.value.targetId)
+  }
+  hideContextMenu()
 }
 
 const onDeleteGate = (id) => {
@@ -326,13 +372,21 @@ const onToggleInput = (gateId) => {
   emit('toggle-input', gateId)
 }
 
+const onDocumentMouseDown = (e) => {
+  if (e.button === 0) {
+    hideContextMenu()
+  }
+}
+
 onMounted(() => {
   document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mousedown', onDocumentMouseDown)
 })
 
 onUnmounted(() => {
   document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onMouseUp)
+  document.removeEventListener('mousedown', onDocumentMouseDown)
 })
 </script>
 
@@ -379,7 +433,7 @@ onUnmounted(() => {
 }
 
 .connection-line:hover {
-  stroke: var(--accent-red);
+  stroke: var(--accent-blue);
   stroke-width: 3;
 }
 
@@ -619,5 +673,46 @@ onUnmounted(() => {
 
 .empty-hint p {
   font-size: 14px;
+}
+
+.context-menu {
+  position: absolute;
+  min-width: 140px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.context-menu-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.context-menu-item.danger {
+  color: var(--accent-red);
+}
+
+.context-menu-item.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
 }
 </style>
