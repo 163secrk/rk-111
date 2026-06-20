@@ -68,11 +68,9 @@
         @move-gates-end="onMoveGatesEnd"
       />
       <PropertyPanel
-        v-if="selectedGate"
         :gate="selectedGate"
         :gates="gates"
         :connections="connections"
-        @close="onClosePropertyPanel"
         @update-label="onUpdateGateLabel"
       />
     </div>
