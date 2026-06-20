@@ -4,6 +4,7 @@
     ref="canvasRef"
     @dragover.prevent="onDragOver"
     @drop.prevent="onDrop"
+    @mousedown="onCanvasMouseDown"
     @click="onCanvasClick"
   >
     <div class="canvas-grid" :style="gridStyle"></div>
@@ -32,12 +33,21 @@
         :d="getTempConnectionPath()"
         class="connection-line temp"
       />
+
+      <rect
+        v-if="selectionBox.visible"
+        :x="selectionBox.x"
+        :y="selectionBox.y"
+        :width="selectionBox.width"
+        :height="selectionBox.height"
+        class="selection-box"
+      />
     </svg>
 
     <div
       v-for="gate in gates"
       :key="gate.id"
-      :class="['gate-node', { selected: selectedGateId === gate.id }]"
+      :class="['gate-node', { selected: isGateSelected(gate.id) }]"
       :style="{
         left: gate.x + 'px',
         top: gate.y + 'px'
@@ -114,38 +124,58 @@
         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
       </svg>
       <p>从左侧拖拽逻辑门到画布上开始设计</p>
+      <p class="hint-sub" style="font-size: 12px; margin-top: 8px; opacity: 0.7;">
+        提示：按住鼠标在空白区域拖拽可框选多门
+      </p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 
 const props = defineProps({
   gates: { type: Array, default: () => [] },
-  connections: { type: Array, default: () => [] }
+  connections: { type: Array, default: () => [] },
+  selectedGateIds: { type: Array, default: () => [] }
 })
 
 const emit = defineEmits([
   'drop-gate',
   'update-gate',
+  'update-gates',
   'delete-gate',
+  'delete-gates',
   'add-connection',
   'delete-connection',
   'toggle-input',
   'select-gate',
-  'canvas-click'
+  'select-gates',
+  'canvas-click',
+  'move-gates-end'
 ])
 
 const canvasRef = ref(null)
 const svgRef = ref(null)
-const selectedGateId = ref(null)
 const connecting = ref(false)
 const connectFrom = ref(null)
 const mousePos = ref({ x: 0, y: 0 })
 
-const draggingGate = ref(null)
-const dragOffset = ref({ x: 0, y: 0 })
+const draggingGates = ref([])
+const dragOffsets = ref(new Map())
+const movedGatesSnapshot = ref([])
+
+const selectionBox = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  startX: 0,
+  startY: 0,
+  width: 0,
+  height: 0
+})
+
+const isSelecting = ref(false)
 
 const contextMenu = ref({
   visible: false,
@@ -162,6 +192,10 @@ const gridStyle = computed(() => ({
 
 const GATE_WIDTH = 100
 const GATE_HEIGHT = 60
+
+const isGateSelected = (gateId) => {
+  return props.selectedGateIds.includes(gateId)
+}
 
 const getGateLabel = (gate) => {
   const labels = {
@@ -265,8 +299,36 @@ const onDrop = (e) => {
   emit('drop-gate', { type: gateType, x: Math.max(0, x), y: Math.max(0, y) })
 }
 
+const onCanvasMouseDown = (e) => {
+  if (e.button !== 0) return
+  if (e.target.closest('.gate-node') || e.target.closest('.port') || e.target.closest('.connection-line') || e.target.closest('.context-menu')) {
+    return
+  }
+
+  const rect = canvasRef.value.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+
+  if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    emit('select-gates', [])
+  }
+
+  isSelecting.value = true
+  selectionBox.value = {
+    visible: true,
+    x,
+    y,
+    startX: x,
+    startY: y,
+    width: 0,
+    height: 0
+  }
+
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
+}
+
 const onCanvasClick = () => {
-  selectedGateId.value = null
   hideContextMenu()
   emit('canvas-click')
   if (connecting.value) {
@@ -280,15 +342,61 @@ const onGateMouseDown = (e, gate) => {
     return
   }
 
-  selectedGateId.value = gate.id
-  emit('select-gate', gate)
-  draggingGate.value = gate
-
   const rect = canvasRef.value.getBoundingClientRect()
-  dragOffset.value = {
-    x: e.clientX - rect.left - gate.x,
-    y: e.clientY - rect.top - gate.y
+  const mouseX = e.clientX - rect.left
+  const mouseY = e.clientY - rect.top
+
+  const ctrlOrMeta = e.ctrlKey || e.metaKey
+
+  if (ctrlOrMeta) {
+    if (isGateSelected(gate.id)) {
+      const newIds = props.selectedGateIds.filter(id => id !== gate.id)
+      emit('select-gates', newIds)
+      if (newIds.length === 1) {
+        const remainingGate = props.gates.find(g => g.id === newIds[0])
+        if (remainingGate) emit('select-gate', remainingGate)
+      }
+    } else {
+      const newIds = [...props.selectedGateIds, gate.id]
+      emit('select-gates', newIds)
+    }
+    nextTick(() => {
+      startDraggingGates(mouseX, mouseY)
+    })
+    return
   }
+
+  if (!isGateSelected(gate.id)) {
+    emit('select-gate', gate)
+  }
+
+  startDraggingGates(mouseX, mouseY)
+}
+
+const startDraggingGates = (mouseX, mouseY) => {
+  const selectedIds = props.selectedGateIds.length > 0 ? [...props.selectedGateIds] : []
+  if (selectedIds.length === 0) return
+
+  draggingGates.value = selectedIds
+  dragOffsets.value = new Map()
+  movedGatesSnapshot.value = []
+
+  selectedIds.forEach(id => {
+    const gate = props.gates.find(g => g.id === id)
+    if (gate) {
+      dragOffsets.value.set(id, {
+        x: mouseX - gate.x,
+        y: mouseY - gate.y
+      })
+      movedGatesSnapshot.value.push({
+        gateId: id,
+        startX: gate.x,
+        startY: gate.y,
+        endX: gate.x,
+        endY: gate.y
+      })
+    }
+  })
 
   document.addEventListener('mousemove', onMouseMove)
   document.addEventListener('mouseup', onMouseUp)
@@ -301,20 +409,93 @@ const onMouseMove = (e) => {
     y: e.clientY - rect.top
   }
 
-  if (draggingGate.value) {
-    const newX = e.clientX - rect.left - dragOffset.value.x
-    const newY = e.clientY - rect.top - dragOffset.value.y
+  if (isSelecting.value) {
+    updateSelectionBox()
+    return
+  }
 
-    emit('update-gate', {
-      id: draggingGate.value.id,
-      x: Math.max(0, newX),
-      y: Math.max(0, newY)
+  if (draggingGates.value.length > 0) {
+    const updates = []
+    draggingGates.value.forEach(id => {
+      const offset = dragOffsets.value.get(id)
+      if (offset) {
+        const newX = Math.max(0, mousePos.value.x - offset.x)
+        const newY = Math.max(0, mousePos.value.y - offset.y)
+        updates.push({ id, x: newX, y: newY })
+        const snap = movedGatesSnapshot.value.find(s => s.gateId === id)
+        if (snap) {
+          snap.endX = newX
+          snap.endY = newY
+        }
+      }
     })
+    if (updates.length === 1) {
+      emit('update-gate', updates[0])
+    } else if (updates.length > 1) {
+      emit('update-gates', updates)
+    }
   }
 }
 
+const updateSelectionBox = () => {
+  const currentX = mousePos.value.x
+  const currentY = mousePos.value.y
+
+  const x = Math.min(selectionBox.value.startX, currentX)
+  const y = Math.min(selectionBox.value.startY, currentY)
+  const width = Math.abs(currentX - selectionBox.value.startX)
+  const height = Math.abs(currentY - selectionBox.value.startY)
+
+  selectionBox.value.x = x
+  selectionBox.value.y = y
+  selectionBox.value.width = width
+  selectionBox.value.height = height
+
+  const selectedIds = []
+  props.gates.forEach(gate => {
+    const gateLeft = gate.x
+    const gateTop = gate.y
+    const gateRight = gate.x + GATE_WIDTH
+    const gateBottom = gate.y + GATE_HEIGHT
+
+    const selLeft = x
+    const selTop = y
+    const selRight = x + width
+    const selBottom = y + height
+
+    const overlaps = !(gateRight < selLeft || gateLeft > selRight || gateBottom < selTop || gateTop > selBottom)
+
+    if (overlaps) {
+      selectedIds.push(gate.id)
+    }
+  })
+
+  emit('select-gates', selectedIds)
+}
+
 const onMouseUp = () => {
-  draggingGate.value = null
+  if (isSelecting.value) {
+    isSelecting.value = false
+    nextTick(() => {
+      selectionBox.value.visible = false
+    })
+    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseup', onMouseUp)
+    return
+  }
+
+  if (draggingGates.value.length > 0) {
+    const hasMoved = movedGatesSnapshot.value.some(
+      s => s.startX !== s.endX || s.startY !== s.endY
+    )
+    if (hasMoved) {
+      emit('move-gates-end', { movedGates: [...movedGatesSnapshot.value] })
+    }
+    draggingGates.value = []
+    dragOffsets.value = new Map()
+    movedGatesSnapshot.value = []
+  }
+
   document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onMouseUp)
 }
@@ -370,7 +551,11 @@ const onDeleteContextConnection = () => {
 }
 
 const onDeleteGate = (id) => {
-  emit('delete-gate', id)
+  if (isGateSelected(id) && props.selectedGateIds.length > 1) {
+    emit('delete-gates', [...props.selectedGateIds])
+  } else {
+    emit('delete-gate', id)
+  }
 }
 
 const onToggleInput = (gateId) => {
@@ -383,15 +568,25 @@ const onDocumentMouseDown = (e) => {
   }
 }
 
+const onKeyDownLocal = (e) => {
+  if (e.key === 'Escape') {
+    connecting.value = false
+    connectFrom.value = null
+    emit('select-gates', [])
+  }
+}
+
 onMounted(() => {
   document.addEventListener('mousemove', onMouseMove)
   document.addEventListener('mousedown', onDocumentMouseDown)
+  document.addEventListener('keydown', onKeyDownLocal)
 })
 
 onUnmounted(() => {
   document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onMouseUp)
   document.removeEventListener('mousedown', onDocumentMouseDown)
+  document.removeEventListener('keydown', onKeyDownLocal)
 })
 </script>
 
@@ -425,6 +620,14 @@ onUnmounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none;
+}
+
+.selection-box {
+  fill: rgba(59, 130, 246, 0.12);
+  stroke: var(--accent-blue);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
   pointer-events: none;
 }
 
@@ -464,6 +667,9 @@ onUnmounted(() => {
 .gate-node.selected .gate-body {
   border-color: var(--accent-blue);
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
+  border-radius: 12px;
 }
 
 .gate-body {
@@ -480,7 +686,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.3),
     0 2px 4px -1px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -488,7 +694,7 @@ onUnmounted(() => {
 
 .gate-body:hover {
   border-color: var(--accent-blue);
-  box-shadow: 
+  box-shadow:
     0 8px 25px -5px rgba(59, 130, 246, 0.3),
     0 4px 10px -2px rgba(59, 130, 246, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -686,6 +892,12 @@ onUnmounted(() => {
 
 .empty-hint p {
   font-size: 14px;
+}
+
+.hint-sub {
+  font-size: 12px;
+  margin-top: 8px;
+  opacity: 0.7;
 }
 
 .context-menu {
