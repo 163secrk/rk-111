@@ -135,6 +135,8 @@ const getGateTypeName = (type) => {
     OR: '或门',
     NOT: '非门',
     XOR: '异或门',
+    NAND: '与非门',
+    NOR: '或非门',
     INPUT: '输入信号',
     OUTPUT: '输出显示'
   }
@@ -147,6 +149,8 @@ const getGateSymbolPath = (type) => {
     OR: 'M4 8 Q12 16 4 24 Q16 24 28 16 Q16 8 4 8',
     NOT: 'M4 8 L24 16 L4 24 Z M24 16 L32 16 M28 16 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0',
     XOR: 'M7 8 Q15 16 7 24 M10 8 Q22 8 30 16 Q22 24 10 24',
+    NAND: 'M4 8 V24 M4 8 Q20 8 28 16 Q20 24 4 24 M28 16 L32 16 M30 16 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0',
+    NOR: 'M4 8 Q12 16 4 24 Q16 24 28 16 Q16 8 4 8 M28 16 L32 16 M30 16 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0',
     INPUT: 'M6 16 L20 16 M20 12 L28 16 L20 20 Z',
     OUTPUT: 'M34 16 L20 16 M20 12 L12 16 L20 20 Z'
   }
@@ -299,6 +303,8 @@ const onLabelInput = (e) => {
 .gate-type.or { color: var(--accent-green); }
 .gate-type.not { color: var(--accent-orange); }
 .gate-type.xor { color: var(--accent-purple); }
+.gate-type.nand { color: #ec4899; }
+.gate-type.nor { color: #14b8a6; }
 .gate-type.input { color: var(--signal-high); }
 .gate-type.output { color: var(--accent-red); }
 
@@ -375,6 +381,10 @@ const onLabelInput = (e) => {
 .source-icon.not { color: var(--accent-orange); }
 .target-icon.xor,
 .source-icon.xor { color: var(--accent-purple); }
+.target-icon.nand,
+.source-icon.nand { color: #ec4899; }
+.target-icon.nor,
+.source-icon.nor { color: #14b8a6; }
 .target-icon.input,
 .source-icon.input { color: var(--signal-high); }
 .target-icon.output,

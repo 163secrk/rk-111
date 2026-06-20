@@ -58,17 +58,51 @@
       </div>
     </div>
 
+    <div class="panel-title" style="margin-top: 20px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="9" y1="13" x2="15" y2="13" />
+        <line x1="9" y1="17" x2="15" y2="17" />
+      </svg>
+      经典电路模板
+    </div>
+
+    <div class="template-list">
+      <div
+        v-for="template in templates"
+        :key="template.id"
+        class="template-item"
+        @click="onLoadTemplate(template)"
+      >
+        <div class="template-icon" :style="{ background: template.color }">
+          {{ template.icon }}
+        </div>
+        <div class="template-info">
+          <div class="template-name">{{ template.name }}</div>
+          <div class="template-desc">{{ template.description }}</div>
+        </div>
+        <div class="template-action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </div>
+
     <div class="panel-tip">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10" />
         <path d="M12 16v-4M12 8h.01" />
       </svg>
-      拖拽组件到画布上，点击端口连线
+      拖拽组件到画布，点击模板一键加载
     </div>
   </div>
 </template>
 
 <script setup>
+import { circuitTemplates } from '../circuitTemplates'
+
 const gateTypes = [
   {
     type: 'AND',
@@ -97,6 +131,20 @@ const gateTypes = [
     desc: 'XOR Gate',
     svgViewBox: '0 0 40 32',
     svgPath: 'M7 8 Q15 16 7 24 M10 8 Q22 8 30 16 Q22 24 10 24'
+  },
+  {
+    type: 'NAND',
+    name: '与非门',
+    desc: 'NAND Gate',
+    svgViewBox: '0 0 40 32',
+    svgPath: 'M4 8 V24 M4 8 Q20 8 28 16 Q20 24 4 24 M28 16 L32 16 M30 16 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0'
+  },
+  {
+    type: 'NOR',
+    name: '或非门',
+    desc: 'NOR Gate',
+    svgViewBox: '0 0 40 32',
+    svgPath: 'M4 8 Q12 16 4 24 Q16 24 28 16 Q16 8 4 8 M28 16 L32 16 M30 16 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0'
   }
 ]
 
@@ -115,12 +163,28 @@ const ioGates = [
   }
 ]
 
-const emit = defineEmits(['drag-start'])
+const templateColors = [
+  'linear-gradient(135deg, #3b82f6, #60a5fa)',
+  'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+  'linear-gradient(135deg, #f97316, #fb923c)',
+  'linear-gradient(135deg, #10b981, #34d399)'
+]
+
+const templates = circuitTemplates.map((t, i) => ({
+  ...t,
+  color: templateColors[i % templateColors.length]
+}))
+
+const emit = defineEmits(['drag-start', 'load-template'])
 
 const onDragStart = (e, type) => {
   e.dataTransfer.setData('gateType', type)
   e.dataTransfer.effectAllowed = 'copy'
   emit('drag-start', type)
+}
+
+const onLoadTemplate = (template) => {
+  emit('load-template', template)
 }
 </script>
 
@@ -201,6 +265,14 @@ const onDragStart = (e, type) => {
   color: var(--accent-purple);
 }
 
+.gate-icon.nand {
+  color: #ec4899;
+}
+
+.gate-icon.nor {
+  color: #14b8a6;
+}
+
 .gate-icon.input {
   color: var(--signal-high);
 }
@@ -244,6 +316,70 @@ const onDragStart = (e, type) => {
 
 .gate-panel::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.template-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.template-item:hover {
+  border-color: var(--accent-purple);
+  background: rgba(168, 85, 247, 0.1);
+  transform: translateX(2px);
+}
+
+.template-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: white;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.template-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.template-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.template-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.template-action {
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.template-item:hover .template-action {
+  color: var(--accent-purple);
+  transform: translateX(2px);
 }
 
 .gate-panel::-webkit-scrollbar-thumb {

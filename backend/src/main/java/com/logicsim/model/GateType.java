@@ -5,6 +5,8 @@ public enum GateType {
     OR,
     NOT,
     XOR,
+    NAND,
+    NOR,
     INPUT,
     OUTPUT
 }

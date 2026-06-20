@@ -168,6 +168,8 @@ const getGateLabel = (gate) => {
     OR: 'OR',
     NOT: 'NOT',
     XOR: 'XOR',
+    NAND: 'NAND',
+    NOR: 'NOR',
     INPUT: 'IN',
     OUTPUT: 'OUT'
   }
@@ -180,6 +182,8 @@ const getGateSymbolPath = (type) => {
     OR: 'M6 8 Q18 20 6 32 Q30 32 50 20 Q30 8 6 8',
     NOT: 'M6 8 L42 20 L6 32 Z M42 20 L52 20 M48 20 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0',
     XOR: 'M10 8 Q22 20 10 32 M14 8 Q34 8 50 20 Q34 32 14 32',
+    NAND: 'M6 8 V32 M6 8 Q36 8 46 20 Q36 32 6 32 M46 20 L52 20 M49 20 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0',
+    NOR: 'M6 8 Q18 20 6 32 Q30 32 46 20 Q30 8 6 8 M46 20 L52 20 M49 20 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0',
     INPUT: 'M8 20 L35 20 M35 14 L52 20 L35 26 Z',
     OUTPUT: 'M52 20 L25 20 M25 14 L8 20 L25 26 Z'
   }
@@ -504,6 +508,14 @@ onUnmounted(() => {
 
 .gate-body.xor {
   color: var(--accent-purple);
+}
+
+.gate-body.nand {
+  color: #ec4899;
+}
+
+.gate-body.nor {
+  color: #14b8a6;
 }
 
 .gate-body.input {

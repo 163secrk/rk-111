@@ -20,7 +20,7 @@
     </header>
 
     <div class="app-body">
-      <GatePanel @drag-start="onDragStart" />
+      <GatePanel @drag-start="onDragStart" @load-template="onLoadTemplate" />
       <LogicCanvas
         ref="canvasRef"
         :gates="gates"
@@ -201,6 +201,46 @@ const onToggleInput = (gateId) => {
   }
 }
 
+const onLoadTemplate = (template) => {
+  const idMap = new Map()
+  const newGates = []
+  const newConnections = []
+
+  template.gates.forEach((g, index) => {
+    gateIdCounter++
+    const newGate = {
+      id: gateIdCounter,
+      type: g.type,
+      x: g.x,
+      y: g.y,
+      inputCount: (g.type === 'NOT' || g.type === 'INPUT' || g.type === 'OUTPUT') ? 1 : 2,
+      outputValue: g.type === 'INPUT' ? false : null,
+      inputValueA: null,
+      inputValueB: null,
+      label: g.label || ''
+    }
+    newGates.push(newGate)
+    idMap.set(index, gateIdCounter)
+  })
+
+  template.connections.forEach(c => {
+    connectionIdCounter++
+    newConnections.push({
+      id: connectionIdCounter,
+      fromGateId: idMap.get(c.fromGateIndex),
+      fromPort: c.fromPort || 0,
+      toGateId: idMap.get(c.toGateIndex),
+      toPort: c.toPort || 0
+    })
+  })
+
+  gates.value = newGates
+  connections.value = newConnections
+  selectedGate.value = null
+  simulate()
+  MessagePlugin.success(`已加载模板：${template.name}`)
+}
+
 const simulate = () => {
   const gateMap = new Map()
   gates.value.forEach(g => gateMap.set(g.id, { ...g }))
@@ -268,6 +308,8 @@ const simulate = () => {
       case 'OR': output = inputA || inputB; break
       case 'NOT': output = !inputA; break
       case 'XOR': output = inputA !== inputB; break
+      case 'NAND': output = !(inputA && inputB); break
+      case 'NOR': output = !(inputA || inputB); break
       case 'OUTPUT': output = inputA; break
       default: output = false
     }

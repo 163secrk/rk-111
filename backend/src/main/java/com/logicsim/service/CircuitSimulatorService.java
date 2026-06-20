@@ -98,6 +98,12 @@ public class CircuitSimulatorService {
             case XOR:
                 output = inputA ^ inputB;
                 break;
+            case NAND:
+                output = !(inputA && inputB);
+                break;
+            case NOR:
+                output = !(inputA || inputB);
+                break;
             case OUTPUT:
                 output = inputA;
                 break;
@@ -122,6 +128,10 @@ public class CircuitSimulatorService {
                 return inputs.length >= 1 && !inputs[0];
             case XOR:
                 return inputs.length >= 2 && (inputs[0] ^ inputs[1]);
+            case NAND:
+                return inputs.length >= 2 && !(inputs[0] && inputs[1]);
+            case NOR:
+                return inputs.length >= 2 && !(inputs[0] || inputs[1]);
             default:
                 return false;
         }
