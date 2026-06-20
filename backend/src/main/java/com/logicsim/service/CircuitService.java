@@ -11,7 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -84,31 +86,44 @@ public class CircuitService {
         Long circuitId = dto.getCircuitId();
 
         List<Gate> gates = dto.getGates();
-        if (gates != null) {
-            for (Gate gate : gates) {
-                gate.setCircuitId(circuitId);
-                if (gate.getInputCount() == null) {
-                    gate.setInputCount(2);
-                }
-            }
-        }
-
         List<Connection> connections = dto.getConnections();
-        if (connections != null) {
-            for (Connection conn : connections) {
-                conn.setCircuitId(circuitId);
-            }
-        }
 
         gateRepository.deleteByCircuitId(circuitId);
         connectionRepository.deleteByCircuitId(circuitId);
 
+        Map<Long, Long> idMapping = new HashMap<>();
+
         if (gates != null && !gates.isEmpty()) {
-            gates = gateRepository.saveAll(gates);
+            for (Gate gate : gates) {
+                Long oldId = gate.getId();
+                gate.setId(null);
+                gate.setCircuitId(circuitId);
+                if (gate.getInputCount() == null) {
+                    gate.setInputCount(2);
+                }
+                Gate saved = gateRepository.save(gate);
+                if (oldId != null) {
+                    idMapping.put(oldId, saved.getId());
+                }
+            }
+            gates = gateRepository.findByCircuitId(circuitId);
         }
 
         if (connections != null && !connections.isEmpty()) {
-            connections = connectionRepository.saveAll(connections);
+            for (Connection conn : connections) {
+                conn.setId(null);
+                conn.setCircuitId(circuitId);
+                Long fromId = conn.getFromGateId();
+                Long toId = conn.getToGateId();
+                if (fromId != null && idMapping.containsKey(fromId)) {
+                    conn.setFromGateId(idMapping.get(fromId));
+                }
+                if (toId != null && idMapping.containsKey(toId)) {
+                    conn.setToGateId(idMapping.get(toId));
+                }
+            }
+            connectionRepository.saveAll(connections);
+            connections = connectionRepository.findByCircuitId(circuitId);
         }
 
         List<Gate> simulatedGates = simulatorService.simulate(gates, connections);

@@ -185,7 +185,7 @@ const getPortPosition = (gateId, portType, portIndex) => {
   } else {
     return {
       x: gate.x,
-      y: gate.y + getInputPortTop(portIndex, gate.inputCount)
+      y: gate.y + getInputPortTop(portIndex, gate.inputCount) + 5
     }
   }
 }
@@ -508,32 +508,31 @@ onUnmounted(() => {
 
 .port {
   position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 3px;
+  width: 10px;
+  height: 10px;
   cursor: crosshair;
   z-index: 10;
 }
 
 .port-input {
-  left: 0;
-  transform: translateX(-50%);
-  justify-content: flex-start;
+  left: -5px;
 }
 
 .port-output {
-  right: 0;
-  transform: translateX(50%);
-  justify-content: flex-end;
+  right: -5px;
 }
 
 .port-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--bg-tertiary);
   border: 2px solid var(--border-color);
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .port:hover .port-dot {
@@ -549,13 +548,14 @@ onUnmounted(() => {
 }
 
 .port-value {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 9px;
   color: var(--text-secondary);
   font-weight: 600;
-}
-
-.port-input .port-value {
-  margin-left: 12px;
+  white-space: nowrap;
 }
 
 .toggle-btn {
