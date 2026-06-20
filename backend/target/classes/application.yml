@@ -1,0 +1,27 @@
+server:
+  port: 8111
+
+spring:
+  application:
+    name: logic-simulator
+  datasource:
+    url: jdbc:sqlite:logic_sim.db
+    driver-class-name: org.sqlite.JDBC
+    username: admin
+    password: admin
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  sql:
+    init:
+      mode: always
+
+  mvc:
+    cors:
+      mappings:
+        '/**':
+          allowed-origins: '*'
+          allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+          allowed-headers: '*'

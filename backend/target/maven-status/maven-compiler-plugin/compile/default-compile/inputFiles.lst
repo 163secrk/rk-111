@@ -1,0 +1,12 @@
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\repository\CircuitRepository.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\controller\CircuitController.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\repository\ConnectionRepository.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\repository\GateRepository.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\model\Circuit.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\dto\CircuitDTO.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\LogicSimApplication.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\service\CircuitService.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\service\CircuitSimulatorService.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\model\Gate.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\model\GateType.java
+D:\data\projects\bz-6\repos\rk-111\backend\src\main\java\com\logicsim\model\Connection.java
