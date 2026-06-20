@@ -43,6 +43,7 @@
         top: gate.y + 'px'
       }"
       @mousedown="onGateMouseDown($event, gate)"
+      @click.stop
     >
       <div :class="['gate-body', gate.type.toLowerCase()]">
         <div class="gate-label">{{ getGateLabel(gate) }}</div>

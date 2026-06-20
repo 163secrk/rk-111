@@ -1,5 +1,5 @@
 <template>
-  <div class="property-panel" v-if="gate">
+  <div class="property-panel" v-if="gate" @click.stop>
     <div class="panel-header">
       <div class="panel-title">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

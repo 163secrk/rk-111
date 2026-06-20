@@ -7,7 +7,6 @@ import jakarta.persistence.*;
 public class Connection {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
     @Column(name = "circuit_id")

@@ -42,6 +42,7 @@ public class CircuitService {
     public Circuit createCircuit(String name, String description) {
         Circuit circuit = new Circuit(name);
         circuit.setDescription(description);
+        circuit.setId(circuitRepository.getMaxId() + 1);
         return circuitRepository.save(circuit);
     }
 
@@ -94,24 +95,26 @@ public class CircuitService {
         Map<Long, Long> idMapping = new HashMap<>();
 
         if (gates != null && !gates.isEmpty()) {
+            long nextGateId = gateRepository.getMaxId() + 1;
             for (Gate gate : gates) {
                 Long oldId = gate.getId();
-                gate.setId(null);
+                gate.setId(nextGateId++);
                 gate.setCircuitId(circuitId);
                 if (gate.getInputCount() == null) {
                     gate.setInputCount(2);
                 }
-                Gate saved = gateRepository.save(gate);
+                gateRepository.save(gate);
                 if (oldId != null) {
-                    idMapping.put(oldId, saved.getId());
+                    idMapping.put(oldId, gate.getId());
                 }
             }
             gates = gateRepository.findByCircuitId(circuitId);
         }
 
         if (connections != null && !connections.isEmpty()) {
+            long nextConnId = connectionRepository.getMaxId() + 1;
             for (Connection conn : connections) {
-                conn.setId(null);
+                conn.setId(nextConnId++);
                 conn.setCircuitId(circuitId);
                 Long fromId = conn.getFromGateId();
                 Long toId = conn.getToGateId();
@@ -138,6 +141,7 @@ public class CircuitService {
 
     public Gate addGate(Long circuitId, Gate gate) {
         gate.setCircuitId(circuitId);
+        gate.setId(gateRepository.getMaxId() + 1);
         if (gate.getInputCount() == null) {
             gate.setInputCount(2);
         }
@@ -165,6 +169,7 @@ public class CircuitService {
 
     public Connection addConnection(Long circuitId, Connection connection) {
         connection.setCircuitId(circuitId);
+        connection.setId(connectionRepository.getMaxId() + 1);
         return connectionRepository.save(connection);
     }
 

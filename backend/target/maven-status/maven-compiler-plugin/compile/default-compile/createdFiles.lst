@@ -1,1 +1,13 @@
+com\logicsim\LogicSimApplication.class
 com\logicsim\service\CircuitSimulatorService$1.class
+com\logicsim\repository\ConnectionRepository.class
+com\logicsim\model\Connection.class
+com\logicsim\model\GateType.class
+com\logicsim\dto\CircuitDTO.class
+com\logicsim\repository\CircuitRepository.class
+com\logicsim\repository\GateRepository.class
+com\logicsim\service\CircuitService.class
+com\logicsim\model\Gate.class
+com\logicsim\service\CircuitSimulatorService.class
+com\logicsim\model\Circuit.class
+com\logicsim\controller\CircuitController.class
